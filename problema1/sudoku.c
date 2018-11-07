@@ -38,11 +38,7 @@ int main(int argc, char *argv[]) {
   carregarGrid();
   limparTela();
   printarGrid();
-  for (campo = 0; campo < CAMPOS; campo++) {
-    for (i = 0; i < TAM; i++) {
-      campValido[campo][i] = 1; // setup
-    }
-  }
+
   for (campo = 0; campo < CAMPOS; campo++) {
     for (i = 0; i < TAM; i++) {
       quemSou[campo][i] = i;
@@ -54,19 +50,11 @@ int main(int argc, char *argv[]) {
   for (campo = 0; campo < CAMPOS; campo++) {
     for (i = 0; i < TAM; i++) {
       pthread_join(thread[campo][i], NULL);
-      //printf("esperando thread %d terminar\n", i);
     }
   }
-  printf("\n\nFIM!!!\n\n");
-  printf("o sudoku eh %s ", (sudokuValido==1) ? "valido" : "invalido");
-  for (campo = 0; campo < CAMPOS; campo++) {
-    for (i = 0; i < TAM; i++) {
-      if(!campValido[campo][i]) {
-        printf("na %s %d\n", qualCampo(campo), i+1);
-      }
-    }
-  }
-  printf("\n");
+  printf("\nO sudoku eh %s \n", (sudokuValido==1) ? "valido" : "invalido");
+
+
   return 0;
 }
 
@@ -81,6 +69,7 @@ void printarGrid() {
     }
     printf("\n");
   }
+  printf("\n");
 }
 
 void carregarGrid() {
@@ -90,8 +79,8 @@ void carregarGrid() {
   limparTela();
   printf("Qual arquivo quer ler?\n");
   do {
-    //qualArq = lerInteiro();
-    qualArq = 1;
+    qualArq = lerInteiro();
+    //qualArq = 1;
   } while((qualArq < 1) || (qualArq > 10));
 
   sprintf(nomeArq, "sudokus/%d.txt", qualArq);
@@ -111,11 +100,8 @@ void carregarGrid() {
 
   fclose(arq);
 }
-/*
-void * checaLinha(void *);
-void * checaColuna(void *);
-void * checaSubgrid(void *);
-*/
+
+
 void *checaLinha(void *l) {
   int i;
   int *linha = l;
@@ -127,11 +113,10 @@ void *checaLinha(void *l) {
     vezesQaparece[ grid[*linha][i]-1 ]++;
   }
   for (i = 0; i < TAM; i++) {
-    if (vezesQaparece[i] != 1) {
-      printf("\nNa linha\n");
+    if (vezesQaparece[i] > 1) {
+      printf("Na linha %d valor %d repete %dx\n", *linha + 1, i+1, vezesQaparece[i]);
       campValido[LINS][*linha] = 0;
       sudokuValido = 0;
-      break;
     }
   }
   /*pthread_mutex_lock(&mutexPrint);
@@ -142,36 +127,29 @@ void *checaLinha(void *l) {
 void *checaColuna(void *c) {
   int i;
   int *coluna = c;
-
-  campValido[*coluna][COLS] = 1;
+  campValido[COLS][*coluna] = 1;
   int vezesQaparece[] = VECT;
 
   for (i = 0; i < TAM; i++) {
     vezesQaparece[ grid[i][*coluna]-1 ]++;
   }
   for (i = 0; i < TAM; i++) {
-    if (vezesQaparece[i] != 1) {
-      printf("\nNa coluna %d valor %d repete\n", *coluna + 1, i+1);
-      campValido[*coluna][COLS] = 0;
+    if (vezesQaparece[i] > 1) {
+      printf("Na coluna %d valor %d repete %dx\n", *coluna + 1, i+1, vezesQaparece[i]);
+      campValido[COLS][*coluna] = 0;
       sudokuValido = 0;
-      break;
     }
   }
-  /*pthread_mutex_lock(&mutexPrint);
-  printf("thread coluna %d pronto\n", *coluna);
-  pthread_mutex_unlock(&mutexPrint);*/
   return NULL;
 }
+
 void *checaSubgrid(void *g) {
   int i;
   int *subGrid = g;
+  campValido[SUB_GRID][*subGrid] = 1;
 
-  for (i = 0; i < TAM; i++) {
-    //
-  }
-  /*pthread_mutex_lock(&mutexPrint);
-  printf("thread subGrid %d pronto\n", *subGrid);
-  pthread_mutex_unlock(&mutexPrint);*/
+  // terminar
+
   return NULL;
 }
 

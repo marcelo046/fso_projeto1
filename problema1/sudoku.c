@@ -25,19 +25,26 @@ int sudokuValido = 1;
 void * checaLinha(void *);
 void * checaColuna(void *);
 void * checaSubgrid(void *);
-void carregarGrid();
-void printarGrid();
+int carregarGrid();
+void printarGrid(int);
+void printLinha();
 void * (*qualFuncao(int)) (void *);
 char *qualCampo(int);
 
 int main(int argc, char *argv[]) {
   pthread_t thread[CAMPOS][TAM];
   pthread_attr_t attrs[CAMPOS][TAM];
-  int quemSou[CAMPOS][TAM], i, campo;
-  // testando
-  carregarGrid();
+  int quemSou[CAMPOS][TAM], i, campo, gridLido;
+
+  gridLido = carregarGrid();
+  if (gridLido == -1) {
+    printf("Erro ao ler arquivo!\n");
+    pausar();
+    return 0;
+  }
+
   limparTela();
-  printarGrid();
+  printarGrid(gridLido);
 
   for (campo = 0; campo < CAMPOS; campo++) {
     for (i = 0; i < TAM; i++) {
@@ -54,25 +61,35 @@ int main(int argc, char *argv[]) {
   }
   printf("\nO sudoku eh %s \n", (sudokuValido==1) ? "valido" : "invalido");
 
-
   return 0;
 }
 
 
 // ========  declaração das funções  ============
+void printLinha() {
+  int i;
+  printf("\n");
+  for(i=0; i<TAM+2; i++) { printf("--"); }
+}
 
-void printarGrid() {
-  int linha, coluna;
+void printarGrid(int qualGrid) {
+  int linha, coluna, i;
+  printf(">>>  arquivo %d  <<<\n", qualGrid);
+  printLinha();
+  printf("\n");
   for (linha = 0; linha < TAM; linha++) {
+    printf("|");
     for (coluna = 0; coluna < TAM; coluna++) {
       printf("%d ", grid[linha][coluna]);
+      if((coluna+1)%3 == 0) printf("|");
     }
+    if ((linha+1)%3 == 0) printLinha();
     printf("\n");
   }
   printf("\n");
 }
 
-void carregarGrid() {
+int carregarGrid() {
   FILE *arq = NULL;
   char nomeArq[50];
   int qualArq, linha, coluna;
@@ -80,16 +97,13 @@ void carregarGrid() {
   printf("Qual arquivo quer ler?\n");
   do {
     qualArq = lerInteiro();
-    //qualArq = 1;
   } while((qualArq < 1) || (qualArq > 10));
 
   sprintf(nomeArq, "sudokus/%d.txt", qualArq);
 
   arq = fopen(nomeArq, "r");
   if (!arq) {
-    printf("Erro ao ler arquivo!\n");
-    pausar();
-    return ;
+    return -1;
   }
 
   for (linha = 0; linha < TAM; linha++) {
@@ -99,6 +113,7 @@ void carregarGrid() {
   }
 
   fclose(arq);
+  return qualArq;
 }
 
 
@@ -114,14 +129,11 @@ void *checaLinha(void *l) {
   }
   for (i = 0; i < TAM; i++) {
     if (vezesQaparece[i] > 1) {
-      printf("Na linha %d valor %d repete %dx\n", *linha + 1, i+1, vezesQaparece[i]);
+      printf("Na linha %d valor %d se repete\n", *linha + 1, i+1);
       campValido[LINS][*linha] = 0;
       sudokuValido = 0;
     }
   }
-  /*pthread_mutex_lock(&mutexPrint);
-  printf("thread linha %d pronto\n", *linha);
-  pthread_mutex_unlock(&mutexPrint);*/
   return NULL;
 }
 void *checaColuna(void *c) {
@@ -135,7 +147,7 @@ void *checaColuna(void *c) {
   }
   for (i = 0; i < TAM; i++) {
     if (vezesQaparece[i] > 1) {
-      printf("Na coluna %d valor %d repete %dx\n", *coluna + 1, i+1, vezesQaparece[i]);
+      printf("Na coluna %d valor %d se repete\n", *coluna + 1, i+1);
       campValido[COLS][*coluna] = 0;
       sudokuValido = 0;
     }
@@ -144,17 +156,29 @@ void *checaColuna(void *c) {
 }
 
 void *checaSubgrid(void *g) {
-  int i;
+  int i, j;
   int *subGrid = g;
   campValido[SUB_GRID][*subGrid] = 1;
+  int vezesQaparece[] = VECT;
+  int linGrid = 3*(*subGrid / 3);
+  int colGrid = 3*(*subGrid % 3);
 
-  // terminar
-
+  for (i = 0; i < 3; i++) {
+    for (j = 0; j < 3; j++) {
+      vezesQaparece[ grid[i+linGrid][j+colGrid]-1 ]++;
+    }
+  }
+  for (i = 0; i < TAM; i++) {
+    if (vezesQaparece[i] > 1) {
+      printf("No sub-grid %d valor %d se repete\n", *subGrid+1, i+1);
+      campValido[SUB_GRID][*subGrid] = 0;
+      sudokuValido = 0;
+    }
+  }
   return NULL;
 }
 
 void * (*qualFuncao(int campo)) (void * c) {
-  //printf("esse: %d\n", campo);
   switch (campo) {
     case LINS:
       return checaLinha;
